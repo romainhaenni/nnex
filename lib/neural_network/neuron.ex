@@ -1,7 +1,7 @@
 defmodule NeuralNetwork.Neuron do
   use GenServer
 
-  # inbound_nodes: [%{id: atom, value: float, weight: float, received: boolean}]
+  # inbound_nodes: [%{id: atom, value: float, weight: float}]
   # outbound_nodes: [id: atom]
   # bias: integer
   defstruct [:id, :inbound_nodes, :outbound_nodes, :bias]
@@ -21,13 +21,12 @@ defmodule NeuralNetwork.Neuron do
       neuron.inbound_nodes
       |> Enum.find(match_input_id_fun)
       |> Map.replace(:value, input_value)
-      |> Map.replace(:received, true)
 
     updated_inbound_nodes = List.replace_at(neuron.inbound_nodes, Enum.find_index(neuron.inbound_nodes, match_input_id_fun), updated_inbound_node)
 
     updated_neuron = %{neuron | inbound_nodes: updated_inbound_nodes}
 
-    if Enum.all?(updated_inbound_nodes, fn(node) -> match?(%{received: true}, node) end) do
+    if !Enum.any?(updated_inbound_nodes, &match?(%{value: nil}, &1)) do
       with {:ok, sent_neuron} <- send_outbound(updated_neuron), do: {:noreply, sent_neuron}
     else
       {:noreply, updated_neuron}
@@ -37,15 +36,15 @@ defmodule NeuralNetwork.Neuron do
   defp send_outbound(%__MODULE__{} = neuron) do
     calculated_value =
       neuron.inbound_nodes
-        |> Enum.reduce(neuron.bias, fn (%{id: _, received: _, value: value, weight: weight}, acc) -> value * weight + acc end)
+        |> Enum.reduce(neuron.bias, fn (%{id: _, value: value, weight: weight}, acc) -> value * weight + acc end)
         |> activate()
 
     Enum.each(neuron.outbound_nodes, fn node_name -> inbound_signal(node_name, neuron.id, calculated_value) end)
 
-    updated_inbound_nodes = Enum.map(neuron.inbound_nodes, fn(node) -> %{node | received: false} end)
-
-    {:ok, %{neuron | inbound_nodes: updated_inbound_nodes}}
+    {:ok, %{neuron | inbound_nodes: reset_nodes(neuron.inbound_nodes)}}
   end
 
   defp activate(value), do: :math.tanh(value)
+
+  defp reset_nodes(nodes), do: Enum.map(nodes, & %{&1 | value: nil})
 end

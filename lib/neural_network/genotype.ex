@@ -5,35 +5,35 @@ defmodule NeuralNetwork.Genotype do
 
   def example() do
     sensors = [
-      %Sensor{id: :sensor_1, outbound_nodes: [:neuron_1_1], value: random_value()}
+      %Sensor{id: :sensor_1, outbound_nodes: [:neuron_1_1]}
     ]
 
     neurons = [
       %Neuron{id: :neuron_1_1, 
         inbound_nodes: [
-          %{id: :sensor_1, value: random_value(), weight: random_value(), received: false}
+          %{id: :sensor_1, weight: random_value(), value: nil}
         ],
         outbound_nodes: [:neuron_2_1, :neuron_2_2],
         bias: 1.0
       },
       %Neuron{id: :neuron_2_1, 
         inbound_nodes: [
-          %{id: :neuron_1_1, value: random_value(), weight: random_value(), received: false}
+          %{id: :neuron_1_1, weight: random_value(), value: nil}
         ],
         outbound_nodes: [:neuron_3_1],
         bias: 1.0
       },
       %Neuron{id: :neuron_2_2, 
         inbound_nodes: [
-          %{id: :neuron_1_1, value: random_value(), weight: random_value(), received: false}
+          %{id: :neuron_1_1, weight: random_value(), value: nil}
         ],
         outbound_nodes: [:neuron_3_1],
         bias: 1.0
       },
       %Neuron{id: :neuron_3_1, 
         inbound_nodes: [
-          %{id: :neuron_2_1, value: random_value(), weight: random_value(), received: false},
-          %{id: :neuron_2_2, value: random_value(), weight: random_value(), received: false}
+          %{id: :neuron_2_1, weight: random_value(), value: nil},
+          %{id: :neuron_2_2, weight: random_value(), value: nil}
         ],
         outbound_nodes: [:actuator_1],
         bias: 1.0

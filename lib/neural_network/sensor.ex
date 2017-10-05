@@ -16,6 +16,6 @@ defmodule NeuralNetwork.Sensor do
 
     Enum.each(sensor.outbound_nodes, fn(node_name) -> Neuron.inbound_signal(node_name, sensor.id, sensed_value) end)
 
-    {:noreply, sensor}
+    {:noreply, %{sensor | value: sensed_value}}
   end
 end
