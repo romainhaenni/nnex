@@ -14,9 +14,11 @@ defmodule NeuralNetwork.Neuron do
     GenServer.cast(node_name, {:inbound_signal, input_id, input_value})
   end
 
+  def reset(node_name, %__MODULE__{} = neuron), do: GenServer.cast(node_name, {:reset, neuron})
+
   def handle_cast({:inbound_signal, input_id, input_value}, neuron) do
     match_input_id_fun = &match?(%{id: ^input_id}, &1)
-
+    
     updated_inbound_node =
       neuron.inbound_nodes
       |> Enum.find(match_input_id_fun)
@@ -33,6 +35,10 @@ defmodule NeuralNetwork.Neuron do
     end
   end
 
+  def handle_cast({:reset, new_neuron}, _neuron) do
+    {:noreply, new_neuron}
+  end
+
   defp send_outbound(%__MODULE__{} = neuron) do
     calculated_value =
       neuron.inbound_nodes
@@ -47,4 +53,37 @@ defmodule NeuralNetwork.Neuron do
   defp activate(value), do: :math.tanh(value)
 
   defp reset_nodes(nodes), do: Enum.map(nodes, & %{&1 | value: nil})
+
+  def perturb_neuron_weights(%__MODULE__{inbound_nodes: inbound_nodes, bias: bias} = neuron) do
+    perturb_probability = 1 / :math.sqrt(length(inbound_nodes))
+
+    updated_inbound_nodes =
+      Enum.map(inbound_nodes, fn node ->
+        case :rand.uniform() < perturb_probability do
+          true -> %{node | weight: (node.weight + random_weight()) |> limit_saturation()}
+          false -> node
+        end
+      end)
+
+    updated_bias =
+      case :rand.uniform() < perturb_probability do
+        true -> (bias + random_weight()) |> limit_saturation()
+        false -> bias
+      end
+
+    %{neuron | inbound_nodes: updated_inbound_nodes, bias: updated_bias}
+  end
+
+  def random_weight(), do: (:rand.uniform() - 0.5) * :math.pi() * 2
+
+  defp limit_saturation(value) do
+    upper_limit = :math.pi() * 2
+    lower_limit = -:math.pi() * 2
+
+    value |> max(lower_limit) |> min(upper_limit)
+  end
+
+  # defp dot(value, weight, acc) when is_float(value), do: value * weight + acc
+  # defp dot([value | []], weight, acc), do: value * weight + acc
+  # defp dot([value | tail], weight, acc), do: dot(tail, weight, value * weight + acc)
 end

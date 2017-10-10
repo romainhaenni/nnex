@@ -1,28 +1,33 @@
 defmodule NeuralNetwork.Cortex do
   use GenServer
 
-  alias NeuralNetwork.{Sensor}
+  alias NeuralNetwork.{Sensor, Exoself}
 
-  defstruct [:sensors, :actuators, :count]
+  defstruct [:sensors, :actuators, :total_fitness]
 
   def start_link(%__MODULE__{} = cortex) do
     GenServer.start_link(__MODULE__, cortex, name: :cortex)
   end
 
-  def trigger(), do: GenServer.cast(:cortex, :trigger)
+  def trigger(life_cycle, fitness_score, outcome), do: GenServer.cast(:cortex, {:trigger, life_cycle, fitness_score, outcome})
 
-  def handle_cast(:trigger, cortex) do
-    updated_count = cortex.count - 1
+  def start(), do: GenServer.cast(:cortex, :start)
 
-    cond do
-      updated_count > 0 ->
-        Enum.each(cortex.sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
+  def handle_cast({:trigger, life_cycle, fitness_score, outcome}, %__MODULE__{sensors: sensors} = cortex) do
+    case life_cycle do
+      :continue ->
+        Enum.each(sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
 
-      true ->
-        IO.puts("Cortex: end of game.")
+      :stop ->
+        Exoself.evaluate_current_phenotype(fitness_score, outcome)
     end
-    
 
-    {:noreply, %{cortex | count: updated_count}}
+    {:noreply, %{cortex | total_fitness: fitness_score}}
+  end
+
+  def handle_cast(:start, %__MODULE__{sensors: sensors} = cortex) do
+    Enum.each(sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
+
+    {:noreply, %{cortex | total_fitness: 0.0}}
   end
 end
