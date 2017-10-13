@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Actuator do
+defmodule NNex.Actuator do
   use GenServer
 
-  alias NeuralNetwork.{Scape, Cortex}
+  alias NNex.{Scape, Cortex}
 
   defstruct [:id]
 

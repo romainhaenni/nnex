@@ -1,5 +1,5 @@
-defmodule NeuralNetwork.Scape.Xor do
-  use NeuralNetwork.Scape
+defmodule NNex.Scape.Xor do
+  use NNex.Scape
 
   def handle_call({:sense, sensor_type}, _from, %__MODULE__{training_data: training_data, training_index: training_index} = scape) do
     {{[left, right], _output}, _list} = List.pop_at(training_data, training_index)

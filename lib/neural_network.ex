@@ -1,3 +1,3 @@
-defmodule NeuralNetwork do
+defmodule NNex do
 
 end

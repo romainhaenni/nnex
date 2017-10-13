@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Trainer do
+defmodule NNex.Trainer do
   use GenServer
 
-  alias NeuralNetwork.{Genotype, Exoself, Neuron, Benchmarker}
+  alias NNex.{Genotype, Exoself, Neuron, Benchmarker}
 
   defstruct [
     :run_count,

@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Sensor do
+defmodule NNex.Sensor do
   use GenServer
 
-  alias NeuralNetwork.{Neuron, Scape}
+  alias NNex.{Neuron, Scape}
 
   defstruct [:id, :outbound_nodes, :value, :type]
 

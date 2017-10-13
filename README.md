@@ -17,7 +17,7 @@ This repo is primarly meant for reading Sher's Erlang examples in a much more un
 Let's say you want to have 5 training sessions. In each we start with a random set of weights and bias within a feed forward network representing a [2,2,1] shape. The only available problem to solve is xor, yet. Actually, you can only set the amount of training iterations. All other settings have been hardcoded in the initializers of each module.
 ```
 $ iex -S mix
-iex(1)> NeuralNetwork.Benchmarker.start(:xor, 5)
+iex(1)> NNex.Benchmarker.start(:xor, 5)
 ```
 
 Example output:
@@ -44,7 +44,7 @@ max: 990
 avg: 432.2
 std: 323.9570341881775
 ```
-Start a new training again with the same function `NeuralNetwork.Benchmarker.start/2`.
+Start a new training again with the same function `NNex.Benchmarker.start/2`.
 
 ## Contribution
 Feel free to contribute. I am open to any feedback and PR. Also, don't hesitate to contact me for a nice chat about the topic of neuroevolution.

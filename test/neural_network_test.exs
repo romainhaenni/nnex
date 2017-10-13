@@ -1,8 +1,8 @@
-defmodule NeuralNetworkTest do
+defmodule NNexTest do
   use ExUnit.Case
-  doctest NeuralNetwork
+  doctest NNex
 
   test "greets the world" do
-    assert NeuralNetwork.hello() == :world
+    assert NNex.hello() == :world
   end
 end

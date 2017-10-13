@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Application do
+defmodule NNex.Application do
   use Application
 
-  alias NeuralNetwork.{Exoself, Trainer, Benchmarker}
+  alias NNex.{Exoself, Trainer, Benchmarker}
 
   def start(_type, _args) do
     :observer.start
@@ -12,7 +12,7 @@ defmodule NeuralNetwork.Application do
       {Benchmarker, %{}}
     ]
 
-    opts = [strategy: :one_for_one, name: NeuralNetwork.Supervisor]
+    opts = [strategy: :one_for_one, name: NNex.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

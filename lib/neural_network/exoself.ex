@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Exoself do
+defmodule NNex.Exoself do
   use GenServer
 
-  alias NeuralNetwork.{Trainer, Cortex, Genotype, Sensor, Neuron, Actuator, Scape}
+  alias NNex.{Trainer, Cortex, Genotype, Sensor, Neuron, Actuator, Scape}
 
   def start_link(defaults) do
     GenServer.start_link(__MODULE__, defaults, name: :exoself)

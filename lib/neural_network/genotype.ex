@@ -1,4 +1,4 @@
-defmodule NeuralNetwork.Genotype do
+defmodule NNex.Genotype do
   defstruct [
     :cortex, 
     :sensors, 
@@ -8,7 +8,7 @@ defmodule NeuralNetwork.Genotype do
     :outcome
   ]
 
-  alias NeuralNetwork.{Sensor, Neuron, Actuator, Cortex}
+  alias NNex.{Sensor, Neuron, Actuator, Cortex}
 
   def random_start_network() do
     sensors = [

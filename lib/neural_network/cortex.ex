@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Cortex do
+defmodule NNex.Cortex do
   use GenServer
 
-  alias NeuralNetwork.{Sensor, Exoself}
+  alias NNex.{Sensor, Exoself}
 
   defstruct [:sensors, :actuators, :total_fitness]
 

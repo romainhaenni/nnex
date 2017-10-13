@@ -1,4 +1,4 @@
-defmodule NeuralNetwork.Neuron do
+defmodule NNex.Neuron do
   use GenServer
 
   # inbound_nodes: [%{id: atom, value: float, weight: float}]

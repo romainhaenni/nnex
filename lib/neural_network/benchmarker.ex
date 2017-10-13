@@ -1,7 +1,7 @@
-defmodule NeuralNetwork.Benchmarker do
+defmodule NNex.Benchmarker do
   use GenServer
 
-  alias NeuralNetwork.{Trainer}
+  alias NNex.{Trainer}
 
   defstruct [
     :max_attempts,

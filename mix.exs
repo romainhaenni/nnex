@@ -1,9 +1,9 @@
-defmodule NeuralNetwork.Mixfile do
+defmodule NNex.Mixfile do
   use Mix.Project
 
   def project do
     [
-      app: :neural_network,
+      app: :nnex,
       version: "0.1.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
@@ -15,7 +15,7 @@ defmodule NeuralNetwork.Mixfile do
   def application do
     [
       extra_applications: [:logger],
-      mod: {NeuralNetwork.Application, []}
+      mod: {NNex.Application, []}
     ]
   end
 
