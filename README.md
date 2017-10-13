@@ -8,7 +8,8 @@ nnex is the translation of Sher's examples from Erlang to Elixir. Mixed with my 
 This repo is primarly meant for reading Sher's Erlang examples in a much more understandable manner thanks to Elixir. However, the code is tagged so that you can checkout the step you are looking for, e.g. for following the sections in the book while reading it. Although not all implementation details which you find in the book have been taken over one-to-one.
 
 ### Tags
-||Tag||Description|||
+|Tag|Description|
+|---|-----------|
 |basic_ff|First setup of connected neurons in a feed forward network, incl. random weights and bias.|
 |SHC|Stochastic Hill Climber algorithm, incl. auto adjusting neuron's weights and bias. Also there is a complete xor problem solution space which is represented by a scape and fitness calculation. A benchmarker module reports detail information about recent training iterations.|
 
