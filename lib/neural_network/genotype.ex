@@ -29,7 +29,7 @@ defmodule NeuralNetwork.Genotype do
     #   build_random_neuron(:neuron_4_1, [:neuron_3_1, :neuron_3_2, :neuron_3_3], [:actuator_1])
     # ]
 
-    [2,1]
+    # [2,2,1]
     neurons = [
       build_random_neuron(:neuron_1_1, [:sensor_1, :sensor_2], [:neuron_2_1, :neuron_2_2]),
       build_random_neuron(:neuron_1_2, [:sensor_1, :sensor_2], [:neuron_2_1, :neuron_2_2]),

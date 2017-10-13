@@ -7,54 +7,56 @@ defmodule NeuralNetwork.Exoself do
     GenServer.start_link(__MODULE__, defaults, name: :exoself)
   end
 
-  def start(%Genotype{} = genotype) do
-    GenServer.cast(:exoself, {:start, genotype})
+  def start(%Genotype{} = genotype, morphology) do
+    GenServer.cast(:exoself, {:start, genotype, morphology})
   end
 
   def evaluate_current_phenotype(fitness_score, outcome) do
     GenServer.cast(:exoself, {:evaluate_current_phenotype, fitness_score, outcome})
   end
 
-  def handle_cast({:start, %Genotype{} = new_genotype}, _genotype) do
-    start_neural_network(new_genotype)
-    Scape.reset()
+  def restart_neural_network(genotype) do
+    GenServer.cast(:exoself, {:restart_neural_network, genotype})
+  end
+
+  def handle_cast({:start, %Genotype{} = new_genotype, morphology}, _genotype) do
+    start_neural_network(new_genotype, morphology)
     Cortex.start()
 
     {:noreply, new_genotype}
   end
 
   def handle_cast({:evaluate_current_phenotype, fitness_score, outcome}, genotype) do
-    next_genotype = Trainer.next_genotype(%{genotype | fitness_score: fitness_score, outcome: outcome})
-    {finished, evaluation_count} = Trainer.training_finished?()
-    best_genotype = Trainer.best_genotype()
+    updated_genotype = %{genotype | fitness_score: fitness_score, outcome: outcome}
 
-    if finished do
-      # IO.puts("Best genotype: #{inspect(best_genotype)}")
-      IO.puts("Achieved fitness score: #{best_genotype.fitness_score} with #{inspect(best_genotype.outcome)}")
-      IO.puts("Evaluations: #{evaluation_count}")
-    else
-      IO.puts("Current best fitness score: #{best_genotype.fitness_score}")
-      restart_neural_network(next_genotype)
-    end
+    Trainer.evaluate(updated_genotype)
    
-    {:noreply, next_genotype}
+    {:noreply, updated_genotype}
   end
 
-  defp restart_neural_network(%Genotype{} = genotype) do
-    Enum.map(genotype.neurons, fn neuron ->
+  def handle_cast({:restart_neural_network, %Genotype{neurons: neurons} = next_genotype}, _genotype) do
+    Enum.map(neurons, fn neuron ->
       Neuron.reset(neuron.id, neuron)
     end)
     Scape.reset()
     Cortex.start()
+
+    {:noreply, next_genotype}
   end
 
-  defp start_neural_network(%Genotype{} = genotype) do
+  defp start_neural_network(%Genotype{} = genotype, morphology) do
+    scape =
+      case morphology do
+        :xor ->
+          Scape.Xor
+      end
+
     children = [
         Enum.map(genotype.sensors, fn sensor -> Supervisor.child_spec({Sensor, sensor}, id: sensor.id) end),
         Enum.map(genotype.neurons, fn neuron -> Supervisor.child_spec({Neuron, neuron}, id: neuron.id) end),
         Enum.map(genotype.actuators, fn actuator -> Supervisor.child_spec({Actuator, actuator}, id: actuator.id) end),
         {Cortex, genotype.cortex},
-        {Scape, []}
+        {scape, %{}}
       ] |> List.flatten
       
     Supervisor.start_link(children, [strategy: :one_for_one, name: __MODULE__])
