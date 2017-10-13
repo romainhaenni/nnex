@@ -50,7 +50,7 @@ Start a new training again with the same function `NeuralNetwork.Benchmarker.sta
 Feel free to contribute. I am open to any feedback and PR. Also, don't hesitate to contact me for a nice chat about the topic of neuroevolution.
 
 ## Thanks
-All this was not possible without Gene I. Sher's Handbook of Neuroevolution through Erlang and Elixir.
+All this was not possible without Gene I. Sher's `Handbook of Neuroevolution through Erlang` and Elixir.
 
 ## Disclaimer
 Please keep in mind, I just started with Elixir development and as well Neuroevolution. So bear with me if I have not understood some important functional concepts. Also, this repository is under construction.
