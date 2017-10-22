@@ -3,7 +3,7 @@ defmodule NNex.Cortex do
 
   alias NNex.{Sensor, Exoself}
 
-  defstruct [:sensors, :actuators, :total_fitness]
+  defstruct [:id, :agent_id, :sensor_ids, :actuator_ids, :total_fitness]
 
   def start_link(%__MODULE__{} = cortex) do
     GenServer.start_link(__MODULE__, cortex, name: :cortex)
@@ -13,7 +13,7 @@ defmodule NNex.Cortex do
 
   def start(), do: GenServer.cast(:cortex, :start)
 
-  def handle_cast({:trigger, life_cycle, fitness_score, outcome}, %__MODULE__{sensors: sensors} = cortex) do
+  def handle_cast({:trigger, life_cycle, fitness_score, outcome}, %__MODULE__{sensor_ids: sensors} = cortex) do
     case life_cycle do
       :continue ->
         Enum.each(sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
@@ -25,7 +25,7 @@ defmodule NNex.Cortex do
     {:noreply, %{cortex | total_fitness: fitness_score}}
   end
 
-  def handle_cast(:start, %__MODULE__{sensors: sensors} = cortex) do
+  def handle_cast(:start, %__MODULE__{sensor_ids: sensors} = cortex) do
     Enum.each(sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
 
     {:noreply, %{cortex | total_fitness: 0.0}}

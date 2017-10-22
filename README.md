@@ -1,6 +1,6 @@
 # nnex - Neural Network in Elixir
 
-Elixir, resp. Erlang can be used perfectly for building neuroevolutionary networks and solving problems with related algorithms. G.I. Sher leads step-by-step through all details in his [Handbook of Neuroevolution Through Erlang](https://www.amazon.com/Handbook-Neuroevolution-Through-Erlang-Gene-ebook/dp/B00AKIFKJ8/ref=mt_kindle?_encoding=UTF8&me=). He outlines advanced theories from how to connect the neurons and implementing stochastic hill climber algorithm to Artificial Life. There are complete code examples written in Erlang.
+Elixir, resp. Erlang can be used perfectly for building neuroevolutionary networks and solving problems with related algorithms. G.I. Sher leads step-by-step through all details in his [Handbook of Neuroevolution Through Erlang](https://www.amazon.com/Handbook-Neuroevolution-Through-Erlang-Gene-ebook/dp/B00AKIFKJ8/ref=mt_kindle?_encoding=UTF8&me=). He outlines advanced theories from how to connect the neurons to fully distributed NNs, substrate encoded NNs, circuits, and NNs capable of learning within their lifetime through neural plasticity. Accompanied with complete code examples written in Erlang.
 
 nnex is the translation of Sher's examples from Erlang to Elixir. Mixed with my own understanding of functional programming as well using Elixir's convenient features.
 

@@ -3,7 +3,7 @@ defmodule NNex.Actuator do
 
   alias NNex.{Scape, Cortex}
 
-  defstruct [:id]
+  defstruct [:id, :type, :cortex_id, :scape, :inbound_nodes]
 
   def start_link(%__MODULE__{id: actuator_name} = actuator) do
     GenServer.start_link(__MODULE__, actuator, name: actuator_name)

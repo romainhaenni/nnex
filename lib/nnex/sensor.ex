@@ -3,7 +3,7 @@ defmodule NNex.Sensor do
 
   alias NNex.{Neuron, Scape}
 
-  defstruct [:id, :outbound_nodes, :value, :type]
+  defstruct [:id, :type, :scape, :outbound_ids]
 
   def start_link(%__MODULE__{id: sensor_name} = sensor) do
     GenServer.start_link(__MODULE__, sensor, name: sensor_name)
@@ -16,6 +16,6 @@ defmodule NNex.Sensor do
 
     Enum.each(sensor.outbound_nodes, fn(node_name) -> Neuron.inbound_signal(node_name, sensor.id, sensed_value) end)
 
-    {:noreply, %{sensor | value: sensed_value}}
+    {:noreply, sensor}
   end
 end

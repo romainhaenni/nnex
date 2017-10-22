@@ -1,7 +1,7 @@
 defmodule NNex.Exoself do
   use GenServer
 
-  alias NNex.{Trainer, Cortex, Genotype, Sensor, Neuron, Actuator, Scape}
+  alias NNex.{Cortex, Genotype, Sensor, Neuron, Actuator, Scape}
 
   def start_link(defaults) do
     GenServer.start_link(__MODULE__, defaults, name: :exoself)
@@ -29,7 +29,7 @@ defmodule NNex.Exoself do
   def handle_cast({:evaluate_current_phenotype, fitness_score, outcome}, genotype) do
     updated_genotype = %{genotype | fitness_score: fitness_score, outcome: outcome}
 
-    Trainer.evaluate(updated_genotype)
+    # Trainer.evaluate(updated_genotype)
    
     {:noreply, updated_genotype}
   end
