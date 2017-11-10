@@ -17,8 +17,11 @@ defmodule NNex.Agent do
     :evolution_history, 
     :fitness_score, 
     :innovation_factor,
-    :results
+    :results,
+    :training_started_at
   ]
+
+  @healthcheck_duration 100
 
   def start_link(%__MODULE__{id: id} = args), do: GenServer.start(__MODULE__, args, name: {:global, {__MODULE__, id}})
 
@@ -46,7 +49,22 @@ defmodule NNex.Agent do
   end
 
   def handle_cast(:start_training, agent) do
+    updated_agent = %{agent | training_started_at: Time.utc_now()}
+
     Cortex.trigger(agent.genotype.cortex.id)
+    Process.send_after(self(), :healthcheck, @healthcheck_duration)
+
+    {:noreply, updated_agent}
+  end
+
+  def handle_info(:healthcheck, agent) do
+    case agent.fitness_score == nil do
+      true ->
+        Specie.session_finished(agent.specie_id, %{agent | fitness_score: 0.0})
+
+      false ->
+        nil
+    end
 
     {:noreply, agent}
   end
