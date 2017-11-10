@@ -1,6 +1,8 @@
 defmodule NNex.Scape.Xor do
   use NNex.Scape
 
+  def morphology(), do: %{sensor_types: [:left, :right], actuator_types: [:result], activation_funs: [:sin, :tanh]}
+
   def handle_call({:sense, sensor_type}, _from, %__MODULE__{training_data: training_data, training_index: training_index} = scape) do
     {{[left, right], _output}, _list} = List.pop_at(training_data, training_index)
 
@@ -43,11 +45,13 @@ defmodule NNex.Scape.Xor do
         true ->
           training_index + 1
       end
-
+      
     {:reply, {life_cycle, total_fitness, new_outcome}, %{scape | training_index: updated_training_index, outcome: new_outcome}}
   end
 
-  def handle_cast(:reset, _scape), do: {:noreply, new_scape()}
+  def handle_call(:morphology, _from, scape), do: {:reply, {scape.sensor_types, scape.actuator_types, scape.activation_funs}, scape}
+
+  def handle_cast(:reset, scape), do: {:noreply, new_scape(scape.id)}
 
   defp calculate_fitness(outcome) do
     error =
@@ -59,7 +63,7 @@ defmodule NNex.Scape.Xor do
     1 / (error + 1.0e-5)
   end
 
-  defp new_scape() do
+  defp new_scape(id) do
     data = [
       {[-1,-1], -1},
       {[1,-1], 1},
@@ -68,9 +72,13 @@ defmodule NNex.Scape.Xor do
     ]
 
     %__MODULE__{
+      id: id,
       training_data: data,
       training_index: 0,
-      outcome: []
+      outcome: [],
+      sensor_types: [:left, :right],
+      actuator_types: [:result],
+      activation_funs: [:sin, :tanh]
     }
   end
 end

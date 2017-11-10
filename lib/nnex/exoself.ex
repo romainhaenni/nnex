@@ -1,64 +1,21 @@
 defmodule NNex.Exoself do
-  use GenServer
+  use Supervisor
 
-  alias NNex.{Cortex, Genotype, Sensor, Neuron, Actuator, Scape}
+  alias NNex.{Cortex, Genotype, Sensor, Neuron, Actuator}
 
-  def start_link(defaults) do
-    GenServer.start_link(__MODULE__, defaults, name: :exoself)
+  def start_link(agent) do
+    Supervisor.start_link(__MODULE__, agent, name: {:global, {__MODULE__, agent.id}})
   end
 
-  def start(%Genotype{} = genotype, morphology) do
-    GenServer.cast(:exoself, {:start, genotype, morphology})
-  end
-
-  def evaluate_current_phenotype(fitness_score, outcome) do
-    GenServer.cast(:exoself, {:evaluate_current_phenotype, fitness_score, outcome})
-  end
-
-  def restart_neural_network(genotype) do
-    GenServer.cast(:exoself, {:restart_neural_network, genotype})
-  end
-
-  def handle_cast({:start, %Genotype{} = new_genotype, morphology}, _genotype) do
-    start_neural_network(new_genotype, morphology)
-    Cortex.start()
-
-    {:noreply, new_genotype}
-  end
-
-  def handle_cast({:evaluate_current_phenotype, fitness_score, outcome}, genotype) do
-    updated_genotype = %{genotype | fitness_score: fitness_score, outcome: outcome}
-
-    # Trainer.evaluate(updated_genotype)
-   
-    {:noreply, updated_genotype}
-  end
-
-  def handle_cast({:restart_neural_network, %Genotype{neurons: neurons} = next_genotype}, _genotype) do
-    Enum.map(neurons, fn neuron ->
-      Neuron.reset(neuron.id, neuron)
-    end)
-    Scape.reset()
-    Cortex.start()
-
-    {:noreply, next_genotype}
-  end
-
-  defp start_neural_network(%Genotype{} = genotype, morphology) do
-    scape =
-      case morphology do
-        :xor ->
-          Scape.Xor
-      end
-
+  def init(agent) do
+    %Genotype{cortex: cortex, sensors: sensors, neurons: neurons, actuators: actuators} = agent.genotype
     children = [
-        Enum.map(genotype.sensors, fn sensor -> Supervisor.child_spec({Sensor, sensor}, id: sensor.id) end),
-        Enum.map(genotype.neurons, fn neuron -> Supervisor.child_spec({Neuron, neuron}, id: neuron.id) end),
-        Enum.map(genotype.actuators, fn actuator -> Supervisor.child_spec({Actuator, actuator}, id: actuator.id) end),
-        {Cortex, genotype.cortex},
-        {scape, %{}}
+        Enum.map(sensors, fn sensor -> Supervisor.child_spec({Sensor, sensor}, id: {Sensor, sensor.id}) end),
+        Enum.map(neurons, fn neuron -> Supervisor.child_spec({Neuron, neuron}, id: {Neuron, neuron.id}) end),
+        Enum.map(actuators, fn actuator -> Supervisor.child_spec({Actuator, actuator}, id: {Actuator, actuator.id}) end),
+        {Cortex, cortex}
       ] |> List.flatten
       
-    Supervisor.start_link(children, [strategy: :one_for_one, name: __MODULE__])
+    Supervisor.init(children, [strategy: :one_for_all, restart: :transient])
   end
 end

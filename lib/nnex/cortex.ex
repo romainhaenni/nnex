@@ -1,33 +1,26 @@
 defmodule NNex.Cortex do
   use GenServer
 
-  alias NNex.{Sensor, Exoself}
+  alias NNex.{Sensor, Agent}
 
   defstruct [:id, :agent_id, :sensor_ids, :actuator_ids, :total_fitness]
 
   def start_link(%__MODULE__{} = cortex) do
-    GenServer.start_link(__MODULE__, cortex, name: :cortex)
+    GenServer.start_link(__MODULE__, cortex, name: {:global, {__MODULE__, cortex.id}})
   end
 
-  def trigger(life_cycle, fitness_score, outcome), do: GenServer.cast(:cortex, {:trigger, life_cycle, fitness_score, outcome})
+  def trigger(id), do: trigger(id, :continue, 0.0, [])
+  def trigger(id, life_cycle, fitness_score, results), do: GenServer.cast({:global, {__MODULE__, id}}, {:trigger, life_cycle, fitness_score, results})
 
-  def start(), do: GenServer.cast(:cortex, :start)
-
-  def handle_cast({:trigger, life_cycle, fitness_score, outcome}, %__MODULE__{sensor_ids: sensors} = cortex) do
+  def handle_cast({:trigger, life_cycle, fitness_score, results}, %__MODULE__{agent_id: agent_id, sensor_ids: sensor_ids} = cortex) do
     case life_cycle do
       :continue ->
-        Enum.each(sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
+        Enum.each(sensor_ids, &Sensor.sense(&1))
 
       :stop ->
-        Exoself.evaluate_current_phenotype(fitness_score, outcome)
+        Agent.session_finished(agent_id, fitness_score, results)
     end
 
     {:noreply, %{cortex | total_fitness: fitness_score}}
-  end
-
-  def handle_cast(:start, %__MODULE__{sensor_ids: sensors} = cortex) do
-    Enum.each(sensors, fn(sensor) -> Sensor.sense(sensor.id) end)
-
-    {:noreply, %{cortex | total_fitness: 0.0}}
   end
 end

@@ -9,110 +9,162 @@ defmodule NNex.Genotype do
 
     These elements are being persisted on disc via NNex.Repo
 
-    During training phase Genotype can apply mutations to the phenotype and persist them.
+    During training phase mutations can apply to the genotype:
+    * Mutate/reset bias
+    * Mutate/reset weight
+    * Mutate/reset activation_fun
+    * Add/remove bias
+    * Add/remove sensor
+    * Add/remove neuron
+    * Add/remove actuator
+    * Add/remove/splice link
   """
   defstruct [
     :cortex, 
     :sensors, 
     :neurons, 
-    :actuators,
-    :fitness_score,
-    :outcome
+    :actuators
   ]
 
-  alias NNex.{Agent, Sensor, Neuron, Actuator, Cortex, Constraint, Repo, Morphology}
+  alias NNex.{Agent, Sensor, Neuron, Actuator, Cortex, Repo}
 
   @doc """
     Setup function to create agent, cortex, sensors, neurons, actuators
   """
-  def create_start_phenotype(specie_id, %Constraint{morphology: morphology, activation_funs: activation_funs} = constraint) do
+  def seed(agent) do
     cortex = Repo.create(%Cortex{})
 
-    sensors_neurons =
-      Enum.map(Morphology.sensor_types(morphology), fn type ->
-        with sensor <- Repo.create(%Sensor{type: type}),
-          neuron <- create_neuron(select_random_activation_fun(activation_funs), [sensor.id], []) 
-        do
-          Repo.save(%Sensor{sensor | outbound_ids: [neuron.id]})
-          {sensor, neuron}
-        end
-      end)
+    %{sensor_types: sensor_types, actuator_types: actuator_types, activation_funs: activation_funs} = agent.scape.morphology()
 
-    actuators_neurons = 
-      Enum.map(Morphology.actuator_types(morphology), fn type ->
-        with actuator <- create_actuator(type, cortex.id),
-          neuron <- create_neuron(select_random_activation_fun(activation_funs), [], [actuator.id]) 
-        do
-          {actuator, neuron}
-        end
-      end)
+    sensors = Enum.map(sensor_types, fn type -> Repo.create(%Sensor{type: type, scape_id: agent.id}) end)
 
-    updated_sensors_neurons = 
-      Enum.map(sensors_neurons, fn {_, sensor_neuron} -> 
-        outbound_ids = Enum.map(actuators_neurons, fn {_, actuator_neuron} -> actuator_neuron.id end)
-        %Neuron{sensor_neuron | outbound_ids: outbound_ids }
-      end)
+    sensor_neurons = for _ <- 1..length(sensors), do: create_neuron(select_random_activation_fun(activation_funs), Enum.map(sensors, fn sensor -> sensor.id end), [])
 
-    updated_actuators_neurons = 
-      Enum.map(actuators_neurons, fn {_, actuator_neuron} -> 
-        inbound_ids = Enum.map(sensors_neurons, fn {_, sensor_neuron} -> sensor_neuron.id end)
-        %Neuron{actuator_neuron | inbound_ids: inbound_ids }
-      end)
+    sensors = Enum.map(sensors, fn sensor -> %{sensor | outbound_nodes: Enum.map(sensor_neurons, fn neuron -> {Neuron, neuron.id} end)} end)
 
-    all_neurons = updated_sensors_neurons ++ updated_actuators_neurons
-  
-    Enum.each(all_neurons, fn neuron -> Repo.save(neuron) end)
+    actuators = Enum.map(actuator_types, fn type -> Repo.create(%Actuator{type: type, cortex_id: cortex.id, scape_id: agent.id}) end)
 
-    sensor_ids = Enum.map(sensors_neurons, fn {sensor, _} -> sensor.id end)
-    neuron_ids = Enum.map(all_neurons, fn neuron -> neuron.id end)
-    actuator_ids = Enum.map(actuators_neurons, fn {actuator, _} -> actuator.id end)
-    
-    pattern = [length(sensors_neurons), length(actuators_neurons)]
+    actuator_neurons = for _ <- 1..length(actuators), do: create_neuron(select_random_activation_fun(activation_funs), [], Enum.map(actuators, fn actuator -> {Actuator, actuator.id} end))
 
-    cortex = %{cortex | sensor_ids: sensor_ids, actuator_ids: actuator_ids}
-    :ok = Repo.save(cortex)
+    actuators = Enum.map(actuators, fn actuator -> %{actuator | inbound_nodes: Enum.map(actuator_neurons, fn neuron -> %{id: neuron.id, value: nil} end)} end)
 
-    agent = create_agent(specie_id, cortex.id, pattern, constraint)
+    sensor_neurons = Enum.map(sensor_neurons, fn neuron -> %{neuron | outbound_nodes: Enum.map(actuator_neurons, fn actuator_neuron -> {Neuron, actuator_neuron.id} end)} end)
 
-    {:ok, agent.id, cortex.id, sensor_ids, neuron_ids, actuator_ids, pattern}
+    actuator_neurons = Enum.map(actuator_neurons, fn neuron -> %{neuron | inbound_nodes: Enum.map(sensor_neurons, fn sensor_neuron -> %{id: sensor_neuron.id, weight: Neuron.random_weight(), value: nil} end)} end)
+
+    all_neurons = sensor_neurons ++ actuator_neurons
+
+    sensor_ids = Enum.map(sensors, fn sensor -> sensor.id end)
+    actuator_ids = Enum.map(actuators, fn actuator -> actuator.id end)
+
+    cortex = %{cortex | agent_id: agent.id, sensor_ids: sensor_ids, actuator_ids: actuator_ids}
+
+    genotype = save(%__MODULE__{cortex: cortex, sensors: sensors, neurons: all_neurons, actuators: actuators})
+    agent = %{agent | genotype: genotype}
+    Repo.save(agent)
+    agent
   end
 
-  defp create_agent(specie_id, cortex_id, pattern, constraint) do
-    agent = %Agent{
-      cortex_id: cortex_id,
+  def save(%__MODULE__{cortex: cortex, sensors: sensors, neurons: neurons, actuators: actuators} = genotype) do
+    Repo.save(cortex)
+    Enum.each(sensors, &Repo.save(&1))
+    Enum.each(neurons, &Repo.save(&1))
+    Enum.each(actuators, &Repo.save(&1))
+    genotype
+  end
+
+  def clone(agent) do
+    %__MODULE__{cortex: cortex, sensors: sensors, neurons: neurons, actuators: actuators} = agent.genotype
+    new_sensors = Enum.map(sensors, &Repo.create(%{&1 | scape_id: agent.id}))
+    sensor_id_map = Enum.zip(Enum.map(sensors, & &1.id), Enum.map(new_sensors, & &1.id))
+
+    new_neurons = Enum.map(neurons, &Repo.create(&1))
+    neuron_id_map = Enum.zip(Enum.map(neurons, & &1.id), Enum.map(new_neurons, & &1.id))
+    
+    new_actuators = Enum.map(actuators, &Repo.create(%{&1 | scape_id: agent.id}))
+    actuator_id_map = Enum.zip(Enum.map(actuators, & &1.id), Enum.map(new_actuators, & &1.id))
+
+    all_id_map = sensor_id_map ++ neuron_id_map ++ actuator_id_map
+
+    cloned_sensors = Enum.map(new_sensors, fn new_sensor -> %{new_sensor | outbound_nodes: update_id_in_nodes(new_sensor.outbound_nodes, all_id_map)} end)
+    cloned_neurons = Enum.map(new_neurons, fn new_neuron -> %{new_neuron | inbound_nodes: update_id_in_map(new_neuron.inbound_nodes, all_id_map), outbound_nodes: update_id_in_nodes(new_neuron.outbound_nodes, all_id_map)} end)
+    cloned_actuators = Enum.map(new_actuators, fn new_actuator -> %{new_actuator | inbound_nodes: update_id_in_map(new_actuator.inbound_nodes, all_id_map)} end)
+
+    sensor_ids = Enum.map(cloned_sensors, & &1.id)
+    actuator_ids = Enum.map(cloned_actuators, & &1.id)
+    cloned_cortex = %{cortex | agent_id: agent.id, sensor_ids: sensor_ids, actuator_ids: actuator_ids} |> Repo.create
+
+    updated_cloned_actuators =
+      Enum.map(cloned_actuators, fn actuator -> %{actuator | cortex_id: cloned_cortex.id} |> Repo.save() end)
+      
+
+    %{agent.genotype | cortex: cloned_cortex, sensors: cloned_sensors, neurons: cloned_neurons, actuators: updated_cloned_actuators}
+  end
+
+  def create_agent(specie_id, scape) do
+    %Agent{
+      scape: scape,
       specie_id: specie_id,
-      constraint: constraint,
       generation: 0,
-      pattern: pattern,
       evolution_history: []
     }
-
-    Repo.create(agent)
+    |> Repo.create()
   end
 
-  defp create_actuator(type, cortex_id) do
-    actuator = %Actuator{
-      type: type,
-      cortex_id: cortex_id
-    }
-
-    Repo.create(actuator)
+  def clone_agent(agent) do
+    cloned_agent = Repo.create(agent)
+    Repo.save(%{cloned_agent | genotype: clone(cloned_agent)})
   end
 
-  defp create_neuron(activation_fun, inbound_ids, outbound_ids) do
-    neuron = %Neuron{
-      inbound_ids: Enum.map(inbound_ids, & %{id: &1, weight: Neuron.random_weight(), value: nil}),
-      outbound_ids: outbound_ids,
-      activation_fun: activation_fun
+  defp create_neuron(activation_fun, inbound_ids, outbound_nodes) do
+    %Neuron{
+      inbound_nodes: Enum.map(inbound_ids, & %{id: &1, weight: Neuron.random_weight(), value: nil}),
+      outbound_nodes: outbound_nodes,
+      activation_fun: activation_fun,
+      bias: Neuron.random_weight()
     }
-
-    Repo.create(neuron)
+    |> Repo.create()
   end
 
   defp select_random_activation_fun([]), do: :tanh
-  defp select_random_activation_fun(activation_funs), do: List.pop_at(activation_funs, :rand.uniform(length(activation_funs)))
+  defp select_random_activation_fun(activation_funs) do
+    with {fun, _} <- List.pop_at(activation_funs, :rand.uniform(length(activation_funs))), do: fun
+  end
 
-  def fingerprint(agent_id) do
-    Repo.find(Agent, agent_id)
+  defp update_id_in_nodes(nodes, []), do: nodes
+  defp update_id_in_nodes(nodes, [{old_id, new_id} | id_map_tail]) do
+    updated_nodes =
+      Enum.map(nodes, fn {node, id} ->
+        case id == old_id do
+          true ->
+            {node, new_id}
+
+          false ->
+            {node, id}
+        end
+      end)
+    update_id_in_nodes(updated_nodes, id_map_tail)
+  end
+
+  defp update_id_in_map(nodes, []), do: nodes
+  defp update_id_in_map(nodes, [{old_id, new_id} | id_map_tail]) do
+    updated_nodes =
+      Enum.map(nodes, fn item -> 
+        case item.id == old_id do
+          true ->
+            Map.update!(item, :id, fn _ -> new_id end)
+
+          false ->
+            item
+        end
+      end)
+    update_id_in_map(updated_nodes, id_map_tail)
+  end
+
+  def print(genotype) do
+    IO.puts("*** Genotype Details ***")
+    IO.puts("Amount Sensors: #{length(genotype.sensors)}")
+    IO.puts("Amount Neurons: #{length(genotype.neurons)}")
+    IO.puts("Amount Actuators: #{length(genotype.actuators)}")
   end
 end

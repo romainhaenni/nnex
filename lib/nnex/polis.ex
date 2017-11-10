@@ -1,19 +1,24 @@
 defmodule NNex.Polis do
+  @moduledoc """
+    Supervises support systems:
+    * Repo
+    * Public Scape
+    * Benchmarker
+    * ...
+  """
+
   use Supervisor
 
-  def start_link(arg) do
-    Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
+  alias NNex.{Repo, PopulationSup}
+
+  def start_link(args) do
+    Supervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 
-  def init(_arg) do
+  def init(_args) do
     Supervisor.init([
-      {NNex.Repo, []}
+      {Repo, []},
+      {PopulationSup, []}
     ], strategy: :one_for_one)
   end
-
-  # TODO: start/stop public scape function
-  # TODO: start/stop supmodules function
-  # TODO: start benchmarker
-  # TODO: start repo
-  # TODO: start error logger
 end

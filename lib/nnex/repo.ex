@@ -19,7 +19,7 @@ defmodule NNex.Repo do
   end
 
   def save(struct) do
-    GenServer.cast(:repo, {:save, struct})
+    GenServer.call(:repo, {:save, struct})
   end
 
   def find(module, id) do
@@ -54,13 +54,13 @@ defmodule NNex.Repo do
     end
   end
 
-  def handle_cast({:save, struct}, repo) do
+  def handle_call({:save, struct}, _from, repo) do
     {:atomic, :ok} =
       Mnesia.transaction(fn ->
         Mnesia.write({struct.__struct__, struct.id, struct})
       end)
 
-    {:noreply, repo}
+    {:reply, struct, repo}
   end
 
   def terminate(:normal, _repo) do
