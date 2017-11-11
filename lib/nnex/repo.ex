@@ -31,10 +31,10 @@ defmodule NNex.Repo do
 
     struct_to_save = %{struct | id: id}
 
-    {:atomic, :ok} =
-      Mnesia.transaction(fn ->
-        Mnesia.write({struct_to_save.__struct__, id, struct_to_save})
-      end)
+    # {:atomic, :ok} =
+    #   Mnesia.transaction(fn ->
+    #     Mnesia.write({struct_to_save.__struct__, id, struct_to_save})
+    #   end)
 
     {:reply, struct_to_save, repo}
   end

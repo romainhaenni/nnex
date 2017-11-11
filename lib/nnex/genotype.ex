@@ -59,10 +59,12 @@ defmodule NNex.Genotype do
 
     cortex = %{cortex | agent_id: agent.id, sensor_ids: sensor_ids, actuator_ids: actuator_ids}
 
-    genotype = save(%__MODULE__{cortex: cortex, sensors: sensors, neurons: all_neurons, actuators: actuators})
-    agent = %{agent | genotype: genotype}
-    Repo.save(agent)
-    agent
+    # genotype = save(%__MODULE__{cortex: cortex, sensors: sensors, neurons: all_neurons, actuators: actuators})
+    # agent = %{agent | genotype: genotype}
+    # Repo.save(agent)
+    # agent
+    genotype = %__MODULE__{cortex: cortex, sensors: sensors, neurons: all_neurons, actuators: actuators}
+    %{agent | genotype: genotype}
   end
 
   def save(%__MODULE__{cortex: cortex, sensors: sensors, neurons: neurons, actuators: actuators} = genotype) do
@@ -95,7 +97,7 @@ defmodule NNex.Genotype do
     cloned_cortex = %{cortex | agent_id: agent.id, sensor_ids: sensor_ids, actuator_ids: actuator_ids} |> Repo.create
 
     updated_cloned_actuators =
-      Enum.map(cloned_actuators, fn actuator -> %{actuator | cortex_id: cloned_cortex.id} |> Repo.save() end)
+      Enum.map(cloned_actuators, fn actuator -> %{actuator | cortex_id: cloned_cortex.id} end)
       
 
     %{agent.genotype | cortex: cloned_cortex, sensors: cloned_sensors, neurons: cloned_neurons, actuators: updated_cloned_actuators}
@@ -113,7 +115,7 @@ defmodule NNex.Genotype do
 
   def clone_agent(agent) do
     cloned_agent = Repo.create(agent)
-    Repo.save(%{cloned_agent | genotype: clone(cloned_agent)})
+    %{cloned_agent | genotype: clone(cloned_agent)}
   end
 
   defp create_neuron(activation_fun, inbound_ids, outbound_nodes) do

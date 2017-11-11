@@ -11,7 +11,7 @@ defmodule NNex.Specie do
 
   use GenServer
 
-  alias NNex.{Utils, Repo, GenotypeMutator, SpecieSup, AgentSup, Genotype, Agent, Exoself}
+  alias NNex.{Utils, GenotypeMutator, SpecieSup, AgentSup, Genotype, Agent, Exoself}
 
   defstruct [
     id: nil,
@@ -45,13 +45,22 @@ defmodule NNex.Specie do
 
   def begin_session(id), do: GenServer.cast({:global, {__MODULE__, id}}, :begin_session)
 
-  def session_finished(id, genotype) do
-    with specie <- GenServer.call({:global, {__MODULE__, id}}, {:session_finished, genotype}) do
-      case evaluation_done?(specie) and not training_finished?(specie) do
-        true -> 
-          GenServer.cast({:global, {__MODULE__, id}}, :select_next_generation)
-          GenServer.cast({:global, {__MODULE__, id}}, :start_next_generation)
-        false -> :ok
+  def session_finished(id, agent) do
+    with specie <- GenServer.call({:global, {__MODULE__, id}}, {:session_finished, agent}) do
+      case evaluation_done?(specie) do
+        true ->
+          case training_finished?(specie) do
+            true ->
+              Agent.print(specie.champion)
+              Genotype.save(agent.genotype)
+
+            false -> 
+              GenServer.cast({:global, {__MODULE__, id}}, :select_next_generation)
+              GenServer.cast({:global, {__MODULE__, id}}, :start_next_generation)
+
+          end
+        
+        false -> nil
       end
     end
   end
@@ -163,7 +172,6 @@ defmodule NNex.Specie do
                 cloned_agent = Genotype.clone_agent(agent) 
                 %{cloned_agent | generation: cloned_agent.generation + 1} 
                 |> GenotypeMutator.mutate()
-                |> Repo.save()
               end
             
             [Genotype.clone_agent(agent) | offsprings]
@@ -184,22 +192,18 @@ defmodule NNex.Specie do
     # The best fitness of the population is not increased some X number of times.
       specie.champion_since >= specie.champion_count_step -> 
         IO.puts("--> training finished by champion since: #{specie.champion_since}")
-        Agent.print(specie.champion)
         true
     # The goal fitness level is reached by one of the agents in the population.
       specie.champion.fitness_score >= specie.fitness_goal -> 
         IO.puts("--> training finished by max fitness score: #{specie.champion.fitness_score}")
-        Agent.print(specie.champion)
         true
     # The preset maximum number of generations has passed.
       Enum.max_by(specie.agents, fn agent -> agent.generation end).generation >= specie.generation_limit -> 
         IO.puts("--> training finished by generation limit: #{specie.champion.generation}")
-        Agent.print(specie.champion)
         true
     # The preset maximum number of evaluations has passed.
       specie.evaluation_count >= specie.evaluation_limit -> 
         IO.puts("--> training finished by evaluation count: #{specie.evaluation_count}")
-        Agent.print(specie.champion)
         true
       true -> false
     end

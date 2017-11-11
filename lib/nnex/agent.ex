@@ -5,7 +5,7 @@ defmodule NNex.Agent do
 
   use GenServer
 
-  alias NNex.{Specie, Repo, Genotype, Cortex}
+  alias NNex.{Specie, Genotype, Cortex}
 
   defstruct [
     :id, 
@@ -39,9 +39,6 @@ defmodule NNex.Agent do
 
   def handle_cast({:session_finished, fitness_score, results}, agent) do
     agent = %{agent | fitness_score: fitness_score, results: results}
-
-    Repo.save(agent)
-    Genotype.save(agent.genotype)
 
     Specie.session_finished(agent.specie_id, agent)
 

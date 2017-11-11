@@ -4,16 +4,17 @@ defmodule NNex.GenotypeMutator do
     * Mutate/reset bias
     * Mutate/reset weight
     * Mutate/reset activation_fun
-    * Add/remove bias
-    * Add/remove sensor
+    * ? Add/remove bias
+    * ? Add/remove sensor
     * Add/remove neuron
-    * Add/remove actuator
-    * Add/remove/splice link
+    * ? Add/remove actuator
+    * Add/remove link
+    * ? Splice/Desplice link
   """
 
   alias NNex.{Neuron, Repo}
 
-  @available_mutation_funs ~w(mutate_bias mutate_activation_fun mutate_weights add_neuron)a
+  @available_mutation_funs ~w(mutate_bias mutate_activation_fun mutate_weights add_neuron add_link)a
 
   def mutate(agent), do: mutate(agent, @available_mutation_funs, :math.pow(length(agent.genotype.neurons), 0.5) |> round() |> :rand.uniform())
 
@@ -26,32 +27,25 @@ defmodule NNex.GenotypeMutator do
     end
   end
 
-  def add_bias do
+  # def add_bias do
     
-  end
+  # end
 
-  def remove_bias do
+  # def remove_bias do
     
-  end
+  # end
 
-  def add_sensor do
+  # def add_sensor do
     
-  end
+  # end
 
-  def remove_sensor do
+  # def remove_sensor do
     
-  end
+  # end
 
   def add_neuron(agent) do
     genotype = agent.genotype
-    {neuronA, indexA} = random_neuron(genotype)
-    {neuronB, indexB} = random_neuron(%{genotype | neurons: List.delete_at(genotype.neurons, indexA)})
-
-    indexB =
-      cond do
-        indexA <= indexB -> indexB + 1
-        true -> indexB
-      end
+    {{neuronA, indexA}, {neuronB, indexB}} = random_neuron_pair(genotype)
 
     new_neuron = 
       %Neuron{
@@ -111,25 +105,43 @@ defmodule NNex.GenotypeMutator do
   #   %{agent | genotype: updated_genotype}
   # end
 
-  def add_actuator do
+  # def add_actuator do
     
-  end
+  # end
 
-  def remove_actuator do
+  # def remove_actuator do
     
-  end
+  # end
 
-  def add_link do
+  def add_link(agent) do
+    genotype = agent.genotype
+    {{neuronA, indexA}, {neuronB, indexB}} = random_neuron_pair(genotype)
     
+    updated_neurons = 
+      case Enum.any?(neuronA.outbound_nodes, fn {_, node_id} -> node_id == neuronB.id end) do
+        true ->
+          genotype.neurons
+
+        false ->
+          updated_neuronA = %{neuronA | outbound_nodes: [{Neuron, neuronB.id} | neuronA.outbound_nodes]}
+          updated_neuronB = %{neuronB | inbound_nodes: [%{id: neuronA.id, weight: Neuron.random_weight(), value: nil} | neuronB.inbound_nodes]}
+
+          genotype.neurons
+          |> List.replace_at(indexA, updated_neuronA)
+          |> List.replace_at(indexB, updated_neuronB)
+      end
+
+    updated_genotype = %{genotype | neurons: updated_neurons}
+    %{agent | genotype: updated_genotype}
   end
 
   def remove_link do
     
   end
 
-  def splice_link do
+  # def splice_link do
     
-  end
+  # end
 
   def mutate_bias(agent) do
     genotype = agent.genotype
@@ -143,8 +155,8 @@ defmodule NNex.GenotypeMutator do
 
     neuron = %{neuron | bias: updated_bias}
     neurons = List.replace_at(genotype.neurons, index, neuron)
-    genotype = %{genotype | neurons: neurons}
-    %{agent | genotype: genotype}
+    updated_genotype = %{genotype | neurons: neurons}
+    %{agent | genotype: updated_genotype}
   end
 
   def mutate_activation_fun(agent) do
@@ -205,5 +217,18 @@ defmodule NNex.GenotypeMutator do
   defp random_neuron(genotype) do 
     with index <- :rand.uniform(length(genotype.neurons)) - 1,
       {neuron, _} <- List.pop_at(genotype.neurons, index), do: {neuron, index}
+  end
+
+  defp random_neuron_pair(genotype) do
+    {neuronA, indexA} = random_neuron(genotype)
+    {neuronB, indexB} = random_neuron(%{genotype | neurons: List.delete_at(genotype.neurons, indexA)})
+
+    indexB =
+      cond do
+        indexA <= indexB -> indexB + 1
+        true -> indexB
+      end
+
+    {{neuronA, indexA}, {neuronB, indexB}}
   end
 end
