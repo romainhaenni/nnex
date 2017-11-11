@@ -83,7 +83,6 @@ defmodule NNex.Specie do
   end
 
   def handle_cast(:select_next_generation, specie) do
-    {new_generation, _low_agents} = selection_by(specie.selection_strategy, specie)
 
     Enum.each(specie.agents, fn agent -> 
       Enum.each(Supervisor.which_children({:global, {Exoself, agent.id}}), fn {id, _pid, _type, _module} -> 
@@ -97,6 +96,8 @@ defmodule NNex.Specie do
       Supervisor.terminate_child({:global, {SpecieSup, specie.id}}, {AgentSup, agent.id})
       Supervisor.delete_child({:global, {SpecieSup, specie.id}}, {AgentSup, agent.id})
     end)
+
+    {new_generation, _low_agents} = selection_by(specie.selection_strategy, specie)
 
     {:noreply, %{specie | agents: new_generation}}
   end

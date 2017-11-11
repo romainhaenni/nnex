@@ -135,8 +135,11 @@ defmodule NNex.GenotypeMutator do
     %{agent | genotype: updated_genotype}
   end
 
-  def remove_link do
-    
+  def remove_link(agent) do
+    genotype = agent.genotype
+    {neuron, index} = random_neuron(genotype)
+
+
   end
 
   # def splice_link do
