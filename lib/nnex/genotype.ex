@@ -165,8 +165,8 @@ defmodule NNex.Genotype do
 
   def print(genotype) do
     IO.puts("*** Genotype Details ***")
-    IO.puts("Amount Sensors: #{length(genotype.sensors)}")
-    IO.puts("Amount Neurons: #{length(genotype.neurons)}")
-    IO.puts("Amount Actuators: #{length(genotype.actuators)}")
+    IO.puts("Sensors: #{length(genotype.sensors)}")
+    IO.puts("Neurons: #{length(genotype.neurons)}")
+    IO.puts("Actuators: #{length(genotype.actuators)}")
   end
 end

@@ -14,7 +14,7 @@ defmodule NNex.GenotypeMutator do
 
   alias NNex.{Neuron, Repo}
 
-  @available_mutation_funs ~w(mutate_bias mutate_activation_fun mutate_weights add_neuron remove_neuron add_link remove_link)a
+  @available_mutation_funs ~w(mutate_bias mutate_activation_fun mutate_weights add_neuron add_link remove_link)a
 
   def mutate(agent), do: mutate(agent, @available_mutation_funs, :math.pow(length(agent.genotype.neurons), 0.5) |> round() |> :rand.uniform())
 
@@ -72,37 +72,75 @@ defmodule NNex.GenotypeMutator do
   def remove_neuron(agent) do
     genotype = agent.genotype
     {neuron_to_remove, _index} = random_neuron(genotype)
-    
-    updated_neurons =
-      genotype.neurons
-      |> Enum.map(fn neuron ->
-        cond do
-          neuron.id == neuron_to_remove.id ->
-            []
 
-          Enum.any?(neuron.outbound_nodes, fn {_, node_id} -> node_id == neuron_to_remove.id end) ->
-            %{neuron | outbound_nodes: List.delete(neuron.outbound_nodes, {Neuron, neuron_to_remove.id})}
+    case :rand.uniform() < perturb_probability(neuron_to_remove) do
+      true ->
+        updated_neurons =
+          genotype.neurons
+          |> Enum.map(fn neuron ->
+            cond do
+              neuron.id == neuron_to_remove.id ->
+                []
 
-          Enum.any?(neuron.inbound_nodes, fn %{id: node_id} -> node_id == neuron_to_remove.id end) ->
-            new_inbound_nodes = 
-              neuron.inbound_nodes
-              |> Enum.map(fn node -> 
-                case node.id == neuron_to_remove.id do
-                  true -> []
-                  false -> node
-                end
-              end)
-              |> List.flatten
+              Enum.any?(neuron.outbound_nodes, fn {_, node_id} -> node_id == neuron_to_remove.id end) ->
+                %{neuron | outbound_nodes: List.delete(neuron.outbound_nodes, {Neuron, neuron_to_remove.id})}
 
-            %{neuron | inbound_nodes: new_inbound_nodes}
-          
-          true -> neuron
-        end
-      end)
-      |> List.flatten
+              Enum.any?(neuron.inbound_nodes, fn %{id: node_id} -> node_id == neuron_to_remove.id end) ->
+                new_inbound_nodes = 
+                  neuron.inbound_nodes
+                  |> Enum.map(fn node -> 
+                    case node.id == neuron_to_remove.id do
+                      true -> []
+                      false -> node
+                    end
+                  end)
+                  |> List.flatten
 
-    updated_genotype = %{genotype | neurons: updated_neurons}
-    %{agent | genotype: updated_genotype}
+                %{neuron | inbound_nodes: new_inbound_nodes}
+              
+              true -> neuron
+            end
+          end)
+          |> List.flatten
+
+        updated_sensors =
+          genotype.sensors
+          |> Enum.map(fn sensor ->
+            cond do
+              Enum.any?(sensor.outbound_nodes, fn {_, node_id} -> node_id == neuron_to_remove.id end) ->
+                %{sensor | outbound_nodes: List.delete(sensor.outbound_nodes, {Neuron, neuron_to_remove.id})}
+              
+              true -> sensor
+            end
+          end)
+
+        updated_actuators =
+          genotype.actuators
+          |> Enum.map(fn actuator ->
+            cond do
+              Enum.any?(actuator.inbound_nodes, fn %{id: node_id} -> node_id == neuron_to_remove.id end) ->
+                updated_inbound_nodes = 
+                  actuator.inbound_nodes
+                  |> Enum.map(fn node -> 
+                    case node.id == neuron_to_remove.id do
+                      true -> []
+                      false -> node
+                    end
+                  end)
+                  |> List.flatten
+
+                %{actuator | inbound_nodes: updated_inbound_nodes}
+              
+              true -> actuator
+            end
+          end)
+
+        updated_genotype = %{genotype | sensors: updated_sensors, neurons: updated_neurons, actuators: updated_actuators}
+        %{agent | genotype: updated_genotype}
+
+      false ->
+        agent
+    end
   end
 
   # def add_actuator do
@@ -140,6 +178,7 @@ defmodule NNex.GenotypeMutator do
     {random_neuron, _index} = random_neuron(genotype)
 
     case length(random_neuron.outbound_nodes) > 1 do
+    # case :rand.uniform() < perturb_probability(random_neuron) do
       true ->
         {{_, random_outbound_id}, _} = List.pop_at(random_neuron.outbound_nodes, :rand.uniform(length(random_neuron.outbound_nodes)) - 1)
 
