@@ -32,17 +32,17 @@ defmodule NNex.Genotype do
     Setup function to create agent, cortex, sensors, neurons, actuators
   """
   def seed(agent) do
-    cortex = Repo.create(%Cortex{})
+    cortex = Repo.new(%Cortex{})
 
     %{sensor_types: sensor_types, actuator_types: actuator_types, activation_funs: activation_funs} = agent.scape.morphology()
 
-    sensors = Enum.map(sensor_types, fn type -> Repo.create(%Sensor{type: type, scape_id: agent.id}) end)
+    sensors = Enum.map(sensor_types, fn type -> Repo.new(%Sensor{type: type, scape_id: agent.id}) end)
 
     sensor_neurons = for _ <- 1..length(sensors), do: create_neuron(select_random_activation_fun(activation_funs), Enum.map(sensors, fn sensor -> sensor.id end), [])
 
     sensors = Enum.map(sensors, fn sensor -> %{sensor | outbound_nodes: Enum.map(sensor_neurons, fn neuron -> {Neuron, neuron.id} end)} end)
 
-    actuators = Enum.map(actuator_types, fn type -> Repo.create(%Actuator{type: type, cortex_id: cortex.id, scape_id: agent.id}) end)
+    actuators = Enum.map(actuator_types, fn type -> Repo.new(%Actuator{type: type, cortex_id: cortex.id, scape_id: agent.id}) end)
 
     actuator_neurons = for _ <- 1..length(actuators), do: create_neuron(select_random_activation_fun(activation_funs), [], Enum.map(actuators, fn actuator -> {Actuator, actuator.id} end))
 
@@ -77,13 +77,13 @@ defmodule NNex.Genotype do
 
   def clone(agent) do
     %__MODULE__{cortex: cortex, sensors: sensors, neurons: neurons, actuators: actuators} = agent.genotype
-    new_sensors = Enum.map(sensors, &Repo.create(%{&1 | scape_id: agent.id}))
+    new_sensors = Enum.map(sensors, &Repo.new(%{&1 | scape_id: agent.id}))
     sensor_id_map = Enum.zip(Enum.map(sensors, & &1.id), Enum.map(new_sensors, & &1.id))
 
-    new_neurons = Enum.map(neurons, &Repo.create(&1))
+    new_neurons = Enum.map(neurons, &Repo.new(&1))
     neuron_id_map = Enum.zip(Enum.map(neurons, & &1.id), Enum.map(new_neurons, & &1.id))
     
-    new_actuators = Enum.map(actuators, &Repo.create(%{&1 | scape_id: agent.id}))
+    new_actuators = Enum.map(actuators, &Repo.new(%{&1 | scape_id: agent.id}))
     actuator_id_map = Enum.zip(Enum.map(actuators, & &1.id), Enum.map(new_actuators, & &1.id))
 
     all_id_map = sensor_id_map ++ neuron_id_map ++ actuator_id_map
@@ -94,7 +94,7 @@ defmodule NNex.Genotype do
 
     sensor_ids = Enum.map(cloned_sensors, & &1.id)
     actuator_ids = Enum.map(cloned_actuators, & &1.id)
-    cloned_cortex = %{cortex | agent_id: agent.id, sensor_ids: sensor_ids, actuator_ids: actuator_ids} |> Repo.create
+    cloned_cortex = %{cortex | agent_id: agent.id, sensor_ids: sensor_ids, actuator_ids: actuator_ids} |> Repo.new
 
     updated_cloned_actuators =
       Enum.map(cloned_actuators, fn actuator -> %{actuator | cortex_id: cloned_cortex.id} end)
@@ -110,11 +110,11 @@ defmodule NNex.Genotype do
       generation: 0,
       evolution_history: []
     }
-    |> Repo.create()
+    |> Repo.new()
   end
 
   def clone_agent(agent) do
-    cloned_agent = Repo.create(agent)
+    cloned_agent = Repo.new(agent)
     %{cloned_agent | genotype: clone(cloned_agent)}
   end
 
@@ -125,7 +125,7 @@ defmodule NNex.Genotype do
       activation_fun: activation_fun,
       bias: Neuron.random_weight()
     }
-    |> Repo.create()
+    |> Repo.new()
   end
 
   defp select_random_activation_fun([]), do: :tanh

@@ -52,7 +52,48 @@ defmodule NNex.Neuron do
     {:ok, %{neuron | inbound_nodes: reset_nodes(neuron.inbound_nodes)}}
   end
 
-  defp activate(value), do: :math.tanh(value)
+  defp activate(value, :tanh), do: :math.tanh(value)
+
+  defp activate(value, :sin), do: :math.sin(value)
+
+  defp activate(value, :cos), do: :math.cos(value)
+
+  defp activate(0, :sgn), do: 0
+  defp activate(value, :sgn) when value > 0, do: 1
+  defp activate(value, :sgn) when value < 0, do: -1
+
+  defp activate(value, :binary) when value > 0, do: 1
+  defp activate(value, :binary) when value <= 0, do: 0
+
+  defp activate(value, :trinary) when value >= 0.33, do: 1
+  defp activate(value, :trinary) when value > -0.33 and value < 0.33, do: 0
+  defp activate(value, :trinary) when value <= -0.33, do: -1
+
+  defp activate(value, :multiquadric), do: :math.pow(value * value + 0.01, 0.5)
+
+  defp activate(value, :quadric), do: activate(value, :sgn) * value * value
+
+  defp activate(value, :abs), do: :math.abs(value)
+
+  defp activate(value, :sqrt), do: activate(:sgn, value) * :math.sqrt(:math.abs(value))
+
+  defp activate(value, :log) when value == 0, do: 0
+  defp activate(value, :log), do: activate(:sgn, value) * :math.log(:math.abs(value))
+
+  @e 2.71828183
+  defp activate(value, :gaussian) when value > 10, do: gaussian(100)
+  defp activate(value, :gaussian) when value < -10, do: gaussian(-100)
+  defp activate(value, :gaussian), do: gaussian(value)
+  defp gaussian(value), do: :math.pow(@e, value)
+
+  defp activate(value, :sigmoid) when value > 10, do: sigmoid(10)
+  defp activate(value, :sigmoid) when value < -10, do: sigmoid(-10)
+  defp activate(value, :sigmoid), do: sigmoid(value)
+  defp sigmoid(value), do: 2 / (1 + :math.pow(@e, value)) - 1
+
+  defp activate(value, :sigmoid_1), do: value / (1 + :math.abs(value))
+
+  defp activate(value, :linear), do: value
 
   defp reset_nodes(nodes), do: Enum.map(nodes, & %{&1 | value: nil})
 

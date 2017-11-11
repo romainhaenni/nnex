@@ -1,7 +1,7 @@
 defmodule NNex.Scape.Xor do
   use NNex.Scape
 
-  def morphology(), do: %{sensor_types: [:left, :right], actuator_types: [:result], activation_funs: [:sin, :tanh]}
+  def morphology(), do: %{sensor_types: [:left, :right], actuator_types: [:result], activation_funs: [:sin, :tanh, :gaussian]}
 
   def handle_call({:sense, sensor_type}, _from, %__MODULE__{training_data: training_data, training_index: training_index} = scape) do
     {{[left, right], _output}, _list} = List.pop_at(training_data, training_index)

@@ -71,6 +71,7 @@ defmodule NNex.Agent do
     IO.puts("Generation: #{agent.generation}")
     IO.puts("Fitness Score: #{agent.fitness_score}")
     IO.puts("Results: #{inspect(agent.results)}")
+    IO.puts("Evolution: #{inspect(agent.evolution_history)}")
     Genotype.print(agent.genotype)
   end
 end

@@ -22,8 +22,14 @@ defmodule NNex.GenotypeMutator do
 
   def mutate(agent, mutation_funs, count) do
     with {mutation_fun, _} <- List.pop_at(mutation_funs, :rand.uniform(length(mutation_funs)) - 1),
-      mutated_agent = apply(__MODULE__, mutation_fun, List.wrap(agent)) do
-        mutate(mutated_agent, mutation_funs, count - 1)
+      {result, mutated_agent} = apply(__MODULE__, mutation_fun, List.wrap(agent)) do
+        case result do
+          :ok ->
+            mutate(mutated_agent, mutation_funs, count - 1)
+
+          :not_mutated ->
+            mutate(mutated_agent, mutation_funs, count)
+        end
     end
   end
 
@@ -54,7 +60,7 @@ defmodule NNex.GenotypeMutator do
         activation_fun: neuronA.activation_fun,
         bias: Neuron.random_weight()
       }
-      |> Repo.create()
+      |> Repo.new()
 
     updated_neuronA = %{neuronA | outbound_nodes: [{Neuron, new_neuron.id} | neuronA.outbound_nodes]}
     updated_neuronB = %{neuronB | inbound_nodes: [%{id: new_neuron.id, weight: Neuron.random_weight(), value: nil} | neuronB.inbound_nodes]}
@@ -66,7 +72,8 @@ defmodule NNex.GenotypeMutator do
       |> List.insert_at(-1, new_neuron)
 
     updated_genotype = %{genotype | neurons: updated_neurons}
-    %{agent | genotype: updated_genotype}
+    new_evolution_history = [{:add_neuron, nil} | agent.evolution_history]
+    {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
   end
 
   def remove_neuron(agent) do
@@ -136,10 +143,11 @@ defmodule NNex.GenotypeMutator do
           end)
 
         updated_genotype = %{genotype | sensors: updated_sensors, neurons: updated_neurons, actuators: updated_actuators}
-        %{agent | genotype: updated_genotype}
+        new_evolution_history = [{:remove_neuron, nil} | agent.evolution_history]
+        {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
 
       false ->
-        agent
+        {:not_mutated, agent}
     end
   end
 
@@ -155,22 +163,23 @@ defmodule NNex.GenotypeMutator do
     genotype = agent.genotype
     {{neuronA, indexA}, {neuronB, indexB}} = random_neuron_pair(genotype)
     
-    updated_neurons = 
-      case Enum.any?(neuronA.outbound_nodes, fn {_, node_id} -> node_id == neuronB.id end) do
-        true ->
-          genotype.neurons
+    case Enum.any?(neuronA.outbound_nodes, fn {_, node_id} -> node_id == neuronB.id end) do
+      true ->
+        {:not_mutated, agent}
 
-        false ->
-          updated_neuronA = %{neuronA | outbound_nodes: [{Neuron, neuronB.id} | neuronA.outbound_nodes]}
-          updated_neuronB = %{neuronB | inbound_nodes: [%{id: neuronA.id, weight: Neuron.random_weight(), value: nil} | neuronB.inbound_nodes]}
+      false ->
+        updated_neuronA = %{neuronA | outbound_nodes: [{Neuron, neuronB.id} | neuronA.outbound_nodes]}
+        updated_neuronB = %{neuronB | inbound_nodes: [%{id: neuronA.id, weight: Neuron.random_weight(), value: nil} | neuronB.inbound_nodes]}
 
+        updated_neurons = 
           genotype.neurons
           |> List.replace_at(indexA, updated_neuronA)
           |> List.replace_at(indexB, updated_neuronB)
-      end
 
-    updated_genotype = %{genotype | neurons: updated_neurons}
-    %{agent | genotype: updated_genotype}
+        updated_genotype = %{genotype | neurons: updated_neurons}
+        new_evolution_history = [{:add_link, nil} | agent.evolution_history]
+        {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
+    end
   end
 
   def remove_link(agent) do
@@ -213,10 +222,11 @@ defmodule NNex.GenotypeMutator do
           end)
 
         updated_genotype = %{genotype | neurons: updated_neurons}
-        %{agent | genotype: updated_genotype}
+        new_evolution_history = [{:remove_link, nil} | agent.evolution_history]
+        {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
 
       false ->
-        agent
+        {:not_mutated, agent}
     end
   end
 
@@ -228,34 +238,38 @@ defmodule NNex.GenotypeMutator do
     genotype = agent.genotype
     {neuron, index} = random_neuron(genotype)
 
-    updated_bias =
-      case :rand.uniform() < perturb_probability(neuron) do
-        true -> (neuron.bias + Neuron.random_weight()) |> limit_saturation()
-        false -> neuron.bias
-      end
+    case :rand.uniform() < perturb_probability(neuron) do
+      true -> 
+        updated_bias = (neuron.bias + Neuron.random_weight()) |> limit_saturation()
 
-    neuron = %{neuron | bias: updated_bias}
-    neurons = List.replace_at(genotype.neurons, index, neuron)
-    updated_genotype = %{genotype | neurons: neurons}
-    %{agent | genotype: updated_genotype}
+        neuron = %{neuron | bias: updated_bias}
+        neurons = List.replace_at(genotype.neurons, index, neuron)
+        updated_genotype = %{genotype | neurons: neurons}
+        new_evolution_history = [{:mutate_bias, neuron.bias} | agent.evolution_history]
+        {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
+
+      false -> 
+        {:not_mutated, agent}
+    end
   end
 
   def mutate_activation_fun(agent) do
     genotype = agent.genotype
     {neuron, index} = random_neuron(genotype)
 
-    %{activation_funs: activation_funs} = agent.scape.morphology()
+    case :rand.uniform() < perturb_probability(neuron) do
+      true -> 
+        %{activation_funs: activation_funs} = agent.scape.morphology()
+        new_activation_fun = select_random_activation_fun(activation_funs)
+        neuron = %{neuron | activation_fun: new_activation_fun}
+        neurons = List.replace_at(genotype.neurons, index, neuron)
+        updated_genotype = %{genotype | neurons: neurons}
+        new_evolution_history = [{:mutate_activation_fun, new_activation_fun} | agent.evolution_history]
+        {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
 
-    new_activation_fun =
-      case :rand.uniform() < perturb_probability(neuron) do
-        true -> select_random_activation_fun(activation_funs)
-        false -> neuron.activation_fun
-      end
-
-    neuron = %{neuron | activation_fun: new_activation_fun}
-    neurons = List.replace_at(genotype.neurons, index, neuron)
-    genotype = %{genotype | neurons: neurons}
-    %{agent | genotype: genotype}
+      false -> 
+        {:not_mutated, agent}
+    end
   end
 
   def mutate_weights(agent) do
@@ -270,10 +284,17 @@ defmodule NNex.GenotypeMutator do
         end
       end)
 
-    neuron = %{neuron | inbound_nodes: updated_inbound_nodes}
-    neurons = List.replace_at(genotype.neurons, index, neuron)
-    genotype = %{genotype | neurons: neurons}
-    %{agent | genotype: genotype}
+    case neuron.inbound_nodes == updated_inbound_nodes do
+      true ->
+        {:not_mutated, agent}
+
+      false ->
+        neuron = %{neuron | inbound_nodes: updated_inbound_nodes}
+        neurons = List.replace_at(genotype.neurons, index, neuron)
+        updated_genotype = %{genotype | neurons: neurons}
+        new_evolution_history = [{:mutate_weights, nil} | agent.evolution_history]
+        {:ok, %{agent | genotype: updated_genotype, evolution_history: new_evolution_history}}
+    end
   end
 
   defp limit_saturation(value) do
@@ -285,7 +306,7 @@ defmodule NNex.GenotypeMutator do
 
   defp select_random_activation_fun([]), do: :tanh
   defp select_random_activation_fun(activation_funs) do
-    with {fun, _} <- List.pop_at(activation_funs, :rand.uniform(length(activation_funs))), do: fun
+    with {fun, _} <- List.pop_at(activation_funs, :rand.uniform(length(activation_funs))-1), do: fun
   end
 
   defp perturb_probability(neuron) do

@@ -14,6 +14,10 @@ defmodule NNex.Repo do
     {:ok, %{}}
   end
 
+  def new(struct) do
+    GenServer.call(:repo, {:new, struct})
+  end
+
   def create(struct) do
     GenServer.call(:repo, {:create, struct})
   end
@@ -26,15 +30,21 @@ defmodule NNex.Repo do
     GenServer.call(:repo, {:find, module, id})
   end
 
+  def handle_call({:new, struct}, _from, repo) do
+    id = Utils.create_unique_id()
+
+    {:reply, %{struct | id: id}, repo}
+  end
+
   def handle_call({:create, struct}, _from, repo) do
     id = Utils.create_unique_id()
 
     struct_to_save = %{struct | id: id}
 
-    # {:atomic, :ok} =
-    #   Mnesia.transaction(fn ->
-    #     Mnesia.write({struct_to_save.__struct__, id, struct_to_save})
-    #   end)
+    {:atomic, :ok} =
+      Mnesia.transaction(fn ->
+        Mnesia.write({struct_to_save.__struct__, id, struct_to_save})
+      end)
 
     {:reply, struct_to_save, repo}
   end
