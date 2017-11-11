@@ -49,9 +49,11 @@ defmodule NNex.Specie do
     with specie <- GenServer.call({:global, {__MODULE__, id}}, {:session_finished, agent}) do
       case evaluation_done?(specie) do
         true ->
+          IO.puts("--> starts specie evaluation #{specie.evaluation_count}")
+          Agent.print(specie.champion)
+
           case training_finished?(specie) do
             true ->
-              Agent.print(specie.champion)
               Genotype.save(agent.genotype)
 
             false -> 
@@ -72,7 +74,7 @@ defmodule NNex.Specie do
   end
 
   def handle_cast(:start_next_generation, specie) do
-    IO.puts("--> starts specie evaluation #{specie.evaluation_count}")
+    # IO.puts("--> starts specie evaluation #{specie.evaluation_count}")
 
     Enum.each(specie.agents, fn agent ->
       Supervisor.start_child({:global, {SpecieSup, specie.id}}, Supervisor.child_spec({AgentSup, agent}, id: {AgentSup, agent.id}))
@@ -103,7 +105,7 @@ defmodule NNex.Specie do
   end
 
   def handle_call({:session_finished, agent}, _from, specie) do
-    IO.puts("session finished agent #{agent.id} #{agent.fitness_score} #{agent.generation}")
+    # IO.puts("session finished agent #{agent.id} #{agent.fitness_score} #{agent.generation}")
     specie =
       cond do
         specie.champion == nil ->

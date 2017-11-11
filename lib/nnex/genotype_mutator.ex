@@ -14,7 +14,7 @@ defmodule NNex.GenotypeMutator do
 
   alias NNex.{Neuron, Repo}
 
-  @available_mutation_funs ~w(mutate_bias mutate_activation_fun mutate_weights add_neuron add_link)a
+  @available_mutation_funs ~w(mutate_bias mutate_activation_fun mutate_weights add_neuron add_link remove_link)a
 
   def mutate(agent), do: mutate(agent, @available_mutation_funs, :math.pow(length(agent.genotype.neurons), 0.5) |> round() |> :rand.uniform())
 
@@ -137,9 +137,48 @@ defmodule NNex.GenotypeMutator do
 
   def remove_link(agent) do
     genotype = agent.genotype
-    {neuron, index} = random_neuron(genotype)
+    {random_neuron, _index} = random_neuron(genotype)
 
+    case length(random_neuron.outbound_nodes) > 1 do
+      true ->
+        {{_, random_outbound_id}, _} = List.pop_at(random_neuron.outbound_nodes, :rand.uniform(length(random_neuron.outbound_nodes)) - 1)
 
+        updated_neurons =
+          genotype.neurons
+          |> Enum.map(fn other_neuron -> 
+            cond do
+              other_neuron.id == random_neuron.id -> 
+                updated_outbound_nodes = List.delete(other_neuron.outbound_nodes, {Neuron, random_outbound_id})
+                %{other_neuron | outbound_nodes: updated_outbound_nodes}
+              
+              other_neuron.id == random_outbound_id ->
+                updated_inbound_nodes =
+                  other_neuron.inbound_nodes
+                  |> Enum.map(fn node ->
+                    case node.id == random_outbound_id do
+                      true ->
+                        []
+
+                      false ->
+                        node
+
+                    end
+                  end)
+                  |> List.flatten
+
+                %{other_neuron | inbound_nodes: updated_inbound_nodes}
+
+              true -> 
+                other_neuron
+            end
+          end)
+
+        updated_genotype = %{genotype | neurons: updated_neurons}
+        %{agent | genotype: updated_genotype}
+
+      false ->
+        agent
+    end
   end
 
   # def splice_link do
