@@ -6,8 +6,9 @@ defmodule NNex.Neuron do
   # bias: integer
   defstruct [:id, :activation_fun, :inbound_nodes, :outbound_nodes, :bias]
 
+  @e 2.71828183
+
   def start_link(%__MODULE__{} = neuron) do
-    # IO.puts("start neuron #{neuron.id}")
     GenServer.start_link(__MODULE__, neuron, name: {:global, {__MODULE__, neuron.id}})
   end
 
@@ -45,12 +46,14 @@ defmodule NNex.Neuron do
     calculated_value =
       neuron.inbound_nodes
         |> Enum.reduce(neuron.bias, fn (%{id: _, value: value, weight: weight}, acc) -> value * weight + acc end)
-        |> activate()
+        |> activate(neuron.activation_fun)
 
     Enum.each(neuron.outbound_nodes, fn {node, id} -> node.inbound_signal(id, neuron.id, calculated_value) end)
 
     {:ok, %{neuron | inbound_nodes: reset_nodes(neuron.inbound_nodes)}}
   end
+
+  defp activate(value, nil), do: activate(value, :tanh)
 
   defp activate(value, :tanh), do: :math.tanh(value)
 
@@ -73,29 +76,29 @@ defmodule NNex.Neuron do
 
   defp activate(value, :quadric), do: activate(value, :sgn) * value * value
 
-  defp activate(value, :abs), do: :math.abs(value)
+  defp activate(value, :abs), do: abs(value)
 
-  defp activate(value, :sqrt), do: activate(:sgn, value) * :math.sqrt(:math.abs(value))
+  defp activate(value, :sqrt), do: activate(:sgn, value) * :math.sqrt(abs(value))
 
   defp activate(value, :log) when value == 0, do: 0
-  defp activate(value, :log), do: activate(:sgn, value) * :math.log(:math.abs(value))
+  defp activate(value, :log), do: activate(:sgn, value) * :math.log(abs(value))
 
-  @e 2.71828183
   defp activate(value, :gaussian) when value > 10, do: gaussian(100)
   defp activate(value, :gaussian) when value < -10, do: gaussian(-100)
   defp activate(value, :gaussian), do: gaussian(value)
-  defp gaussian(value), do: :math.pow(@e, value)
 
   defp activate(value, :sigmoid) when value > 10, do: sigmoid(10)
   defp activate(value, :sigmoid) when value < -10, do: sigmoid(-10)
   defp activate(value, :sigmoid), do: sigmoid(value)
-  defp sigmoid(value), do: 2 / (1 + :math.pow(@e, value)) - 1
 
-  defp activate(value, :sigmoid_1), do: value / (1 + :math.abs(value))
+  defp activate(value, :sigmoid_1), do: value / (1 + abs(value))
 
   defp activate(value, :linear), do: value
 
   defp reset_nodes(nodes), do: Enum.map(nodes, & %{&1 | value: nil})
+
+  defp gaussian(value), do: :math.pow(@e, value)
+  defp sigmoid(value), do: 2 / (1 + :math.pow(@e, value)) - 1
 
   def random_weight(), do: (:rand.uniform() - 0.5) * :math.pi() * 2
 
