@@ -12,7 +12,7 @@ This repo is primarly meant for reading Sher's Erlang examples in a much more un
 |---|-----------|
 |`basic_ff`|First setup of connected neurons in a feed forward network, incl. random weights and bias.|
 |`SHC`|Stochastic Hill Climber algorithm, incl. auto adjusting neuron's weights and bias. Also there is a complete xor problem solution space which is represented by a scape and fitness calculation. A benchmarker module reports detail information about recent training iterations.|
-|`simple_neuroevolutaionary_platform`|A simple but complete neuro network controlled by supervisor trees. Incl. polis, population, species with agents (exoself, cortex, neurons, actuators, sensors). Champion species are being saved in a mnesia db after training.|
+|`simple_neuroevolutionary_platform`|A simple but complete neuro network controlled by supervisor trees. Incl. polis, population, species with agents (exoself, cortex, neurons, actuators, sensors). Champion species are being saved in a mnesia db after training.|
 
 ## Summary
 The network is hierarchically setup with a supervisor tree: Polis -> Population -> Specie -> Agent -> [Exoself, Cortex, Private Scape] -> [Sensors, Neurons, Actuators]
