@@ -8,7 +8,7 @@ defmodule NNex.GenotypeMutator do
     * ? Add/remove sensor
     * Add/remove neuron
     * ? Add/remove actuator
-    * Add/remove link
+    * Add/remove link between neurons
     * ? Splice/Desplice link
   """
 

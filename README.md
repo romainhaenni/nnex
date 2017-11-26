@@ -12,39 +12,57 @@ This repo is primarly meant for reading Sher's Erlang examples in a much more un
 |---|-----------|
 |`basic_ff`|First setup of connected neurons in a feed forward network, incl. random weights and bias.|
 |`SHC`|Stochastic Hill Climber algorithm, incl. auto adjusting neuron's weights and bias. Also there is a complete xor problem solution space which is represented by a scape and fitness calculation. A benchmarker module reports detail information about recent training iterations.|
+|`simple_neuroevolutaionary_platform`|A simple but complete neuro network controlled by supervisor trees. Incl. polis, population, species with agents (exoself, cortex, neurons, actuators, sensors). Champion species are being saved in a mnesia db after training.|
+
+## Summary
+The network is hierarchically setup with a supervisor tree: Polis -> Population -> Specie -> Agent -> [Exoself, Cortex, Private Scape] -> [Sensors, Neurons, Actuators]
+
+The specie contains the most important settings, e.g. population size, generation limit, evaluation limit, fitness goal, ...
+
+The network initializes itself according to the scape morphology. The xor example contains requires two sensors and one actuator. Therefore, the resulting start feed forward network contains: 2 sensors -> 2 neurons => 1 neuron -> 1 actuator. I.e. if you start off with 10 sensors and 2 actuators, the resutlting start network would look like: 10 sensors -> 10 neurons => 2 neuron -> 2 actuator
+
+During training phase the genotype mutator can apply to the genotype:
+* Mutate/reset bias
+* Mutate/reset weight
+* Mutate/reset activation_fun
+* Add/remove neuron
+* Add/remove link between neurons
 
 ## Usage
-Let's say you want to have 5 training sessions. In each we start with a random set of weights and bias within a feed forward network representing a [2,2,1] shape. The only available problem to solve is xor, yet. Actually, you can only set the amount of training iterations. All other settings have been hardcoded in the initializers of each module.
+We use an easy xor scape. The simple neuroevolutionary platform will provide a much faster and more accurate solution than the basic ff and SHC network are able to. Jump right into iex and start a training session.
 ```
 $ iex -S mix
-iex(1)> NNex.Benchmarker.start(:xor, 5)
+iex(1)> NNex.Population.start_training(NNex.Scape.Xor)
 ```
 
 Example output:
 ```
-Achieved fitness score: 45624.200131771206 with [{1, 1, -1, -0.9999999785796826}, {-1, 1, 1, 0.9999938647437604}, {1, -1, 1, 0.9999938404094855}, {-1, -1, -1, -0.9999918476427577}]
-Achieved fitness score: 11006.031209907529 with [{1, 1, -1, -0.9999480047330113}, {-1, 1, 1, 0.9999936971789458}, {1, -1, 1, 0.999992923352157}, {-1, -1, -1, -0.9999388043316404}]
-Achieved fitness score: 0.7064830898809884 with [{1, 1, -1, 0.03523224746670333}, {-1, 1, 1, 0.999999994012389}, {1, -1, 1, 0.034748345322130385}, {-1, -1, -1, -0.9906227933898615}]
-Achieved fitness score: 16251.214657594215 with [{1, 1, -1, -0.9999925563975224}, {-1, 1, 1, 0.9999928579560639}, {1, -1, 1, 0.9999928600623587}, {-1, -1, -1, -0.9999500165606103}]
-Achieved fitness score: 14922.10335579571 with [{1, 1, -1, -0.999994263000968}, {-1, 1, 1, 0.9999612510931809}, {1, -1, 1, 0.9999599413541268}, {-1, -1, -1, -0.9999894364858347}]
-benchmark report for xor
-Fitness:
-min: 0.5256343762415718
-max: 2875.0720264102465
-avg: 628.6143732786473
-std: 1127.8879566720145
-Evaluations:
-min: 102
-max: 1000
-avg: 443.2
-std: 324.86514125095044
-Attempts:
-min: 96
-max: 990
-avg: 432.2
-std: 323.9570341881775
+--> starts specie evaluation 1
+...
+--> starts specie evaluation 50
+*** Agent Details ***
+Generation: 24
+Fitness Score: 99999.44748276072
+Results: [{1, 1, -1, -0.9999999999952417}, {-1, 1, 1, 0.9999999999473907}, {1, -1, 1, 0.9999999999991567}, {-1, -1, -1, -0.9999999999838228}]
+Evolution: [add_neuron: nil, mutate_weights: nil, mutate_weights: nil, mutate_weights: nil, mutate_weights: nil, mutate_weights: nil, mutate_weights: nil, mutate_bias: -0.6047821251798196, mutate_bias: -1.0613023134455948, add_neuron: nil, mutate_weights: nil, mutate_bias: 2.832575296976719, mutate_activation_fun: :sin,mutate_activation_fun: :sin, mutate_bias: -1.416122868933134, add_link: nil, add_neuron: nil, add_link: nil, add_neuron: nil, mutate_weights: nil, mutate_bias: 1.4697050151951023, add_neuron: nil, add_neuron: nil, mutate_bias: -4.616982267976635, mutate_activation_fun: :tanh, add_neuron: nil, mutate_bias: 0.4257405621343202, mutate_bias: -4.837974312574072, mutate_weights: nil, mutate_bias: -1.3390302981690834, mutate_activation_fun: :sin, mutate_bias: -4.479495773019965, mutate_weights: nil, mutate_weights: nil, mutate_weights: nil, mutate_weights: nil, mutate_bias: -0.17501920497008105, add_neuron: nil, mutate_weights: nil]
+*** Genotype Details ***
+Sensors: 2
+Neurons: 11
+Actuators: 1
+...
+--> starts specie evaluation 90
+*** Agent Details ***
+Generation: 17
+Fitness Score: 99999.99999999999
+Results: [{1, 1, -1, -1.0}, {-1, 1, 1, 1.0}, {1, -1, 1, 1.0}, {-1, -1, -1, -1.0}]
+Evolution: [mutate_bias: 3.061974080097536, mutate_weights: nil, mutate_bias: -0.09667420736140614, mutate_activation_fun: :gaussian, mutate_weights: nil, mutate_bias: -3.245686976705701, mutate_activation_fun: :tanh, mutate_weights: nil, mutate_bias: 1.4646110542953847, mutate_bias: 1.7195861930952392, mutate_bias: -0.29756556246420485, mutate_weights: nil, mutate_bias: 0.05718953777188407, mutate_activation_fun: :tanh, mutate_activation_fun: :tanh, mutate_bias: -0.6850869186187882, add_link: nil, add_neuron: nil, mutate_activation_fun: :gaussian, mutate_bias: -1.1529651926729487, add_neuron: nil, add_neuron: nil, mutate_weights: nil,mutate_activation_fun: :sin, add_neuron: nil, mutate_weights: nil]
+*** Genotype Details ***
+Sensors: 2
+Neurons: 7
+Actuators: 1
+--> training finished by champion since: 504
 ```
-Start a new training again with the same function `NNex.Benchmarker.start/2`.
+Start a new training again with the same function `NNex.Population.start_training/1`.
 
 ## Contribution
 Feel free to contribute. I am open to any feedback and PR. Also, don't hesitate to contact me for a nice chat about the topic of neuroevolution.
